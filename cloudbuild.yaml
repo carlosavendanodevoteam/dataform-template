@@ -1,0 +1,109 @@
+substitutions:
+    _APPLY_CHANGES: 'false'
+    _ENV: 'undefined'
+    _USECASE: 'undefined'
+    _REGION: 'undefined'
+steps:
+- id: 'context'
+  name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  secretEnv: ['SSH_KEY']
+  args:
+  - '-c'
+  - |
+      echo "************************************************"
+      echo "project : $PROJECT_ID"
+      echo "branch  : $BRANCH_NAME"
+      echo "env     : ${_ENV}"
+      echo "mode    : $([[ ${_APPLY_CHANGES} = 'true' ]] && echo 'LIVE' || echo 'DRY RUN')"
+      echo "************************************************"
+      echo "********* SSH CONNECTION TO GIT REPO ***********"
+      ssh-keyscan -t rsa github.com > /root/.ssh/known_hosts
+      echo "$$SSH_KEY" >> /root/.ssh/id_rsa
+      chmod 400 /root/.ssh/id_rsa
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- id: 'terraform init'
+  name: 'hashicorp/terraform:latest'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      cd iac/environments/${_ENV}
+      TF_IN_AUTOMATION=1 terraform init -input=false -no-color
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- id: 'terraform plan'
+  name: 'hashicorp/terraform:latest'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      cd iac/environments/${_ENV}
+      TF_IN_AUTOMATION=1 terraform plan -no-color -input=false -out changes.tfplan
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- id: 'terraform apply'
+  name: 'hashicorp/terraform:latest'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      if [ "${_APPLY_CHANGES}" = 'true' ]; then
+        echo "*****************************************"
+        echo "Applying changes on live environment"
+        echo "*****************************************"
+        cd iac/environments/${_ENV}
+        TF_IN_AUTOMATION=1 terraform apply -input=false -auto-approve changes.tfplan
+      else
+        echo "*****************************************"
+        echo "Skipping apply (DRY RUN)"
+        echo "*****************************************"
+      fi
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- id: 'dataform run'
+  name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      if [ "${_APPLY_CHANGES}" = 'true' ]; then
+        echo "*****************************************"
+        echo "Running Dataform transformations ..."
+        echo "*****************************************"
+        gcloud workflows run dataform-executor-${_USECASE} \
+          --project=${PROJECT_ID} \
+          --location=${_REGION} \
+          --data='{"env":"${_ENV}",
+                  "wait_for_dataform_status_check":true}' \
+          > dataform-run-output.log
+
+        expected_result="state: SUCCEEDED"
+        actual_result="$(grep "state" dataform-run-output.log)"
+
+        if [ "$expected_result" = "$actual_result" ]; then
+          echo "Dataform run succeeded !"
+        else
+          echo "Dataform run failed ! Expected: $expected_result Actual: $actual_result"
+          echo "Please go to the Dataform UI to check the execution logs"
+          echo "*****************************************"
+          cat dataform-run-output.log
+          exit 1
+        fi
+      else
+        echo "*****************************************"
+        echo "Skipping Dataform run (DRY RUN)"
+        echo "*****************************************"
+      fi
+logsBucket: "gs://${PROJECT_ID}-gcs-cloud-build-logs/"
+options:
+  logging: GCS_ONLY
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/cloudbuild-ssh-key-${_ENV}/versions/latest
+    env: 'SSH_KEY'

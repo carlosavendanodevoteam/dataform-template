@@ -1,0 +1,22 @@
+region: "europe-west1"
+
+apis_to_activate: [
+  "secretmanager.googleapis.com",
+  "dataform.googleapis.com"
+  ]
+
+github_organization_name: "devoteamgcloud"
+github_repository_name: "dgc-dataform-sample-project"
+github_repository_url:  "https://github.com/devoteamgcloud/dgc-dataform-sample-project.git"
+
+dataform_scheduler_cron: "0 0 1 * *"
+
+bigquery:
+  datasets_short_names: [
+      "staging",
+      "reporting",
+      # "assertions"
+    ]
+  datasets_viewers: [
+      "group:fr.dgc.ops.data@devoteamgcloud.com"
+    ]

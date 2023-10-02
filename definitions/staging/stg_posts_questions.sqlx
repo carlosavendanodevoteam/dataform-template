@@ -1,0 +1,23 @@
+config {
+  type: "view",
+  description: "Cleaned version of stackoverflow.posts_questions",
+
+  // uncomment 'database' if you don't want to use the default database specified in 'dataform.json'
+  // keep commented if you use the template on a projet without env, e.g. Devoteam sandbox
+  // database: dataform.projectConfig.vars.project + dataform.projectConfig.vars.env,
+  schema: "d_" + dataform.projectConfig.vars.use_case + "_staging_" + dataform.projectConfig.vars.env,
+}
+
+select
+  id as post_id,
+  creation_date as created_at,
+  'question' as type,
+  title,
+  --- body,
+  owner_user_id,
+  parent_id
+from
+  ${ref("posts_questions")}
+where
+  -- limit to recent data for the purposes of this demo project
+  creation_date >= TIMESTAMP(DATE_SUB(CURRENT_DATETIME(), INTERVAL 6 MONTH))

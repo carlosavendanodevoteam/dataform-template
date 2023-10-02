@@ -1,0 +1,17 @@
+config {
+  type: "view",
+  description: "Cleaned version of stackoverflow.badges",
+
+  // uncomment 'database' if you don't want to use the default database specified in 'dataform.json'
+  // keep commented if you use the template on a projet without env, e.g. Devoteam sandbox
+  // database: dataform.projectConfig.vars.project + dataform.projectConfig.vars.env,
+  schema: "d_" + dataform.projectConfig.vars.use_case + "_staging_" + dataform.projectConfig.vars.env,
+}
+
+select
+  id as badge_id,
+  name as badge_name,
+  date as award_timestamp,
+  user_id
+from
+  ${ref("badges")}

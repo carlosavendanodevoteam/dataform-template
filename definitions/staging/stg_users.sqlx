@@ -1,0 +1,19 @@
+config {
+  type: "view",
+  description: "Cleaned version of stackoverflow.users table",
+
+  // uncomment 'database' if you don't want to use the default database specified in 'dataform.json'
+  // keep commented if you use the template on a projet without env, e.g. Devoteam sandbox
+  // database: dataform.projectConfig.vars.project + dataform.projectConfig.vars.env,
+  schema: "d_" + dataform.projectConfig.vars.use_case + "_staging_" + dataform.projectConfig.vars.env,
+}
+
+select
+  id as user_id,
+  age,
+  creation_date,
+  round(
+    timestamp_diff(current_timestamp(), creation_date, day) / 365
+  ) as user_tenure
+from
+  ${ref("users")}

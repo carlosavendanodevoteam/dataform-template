@@ -1,0 +1,38 @@
+config {
+  type: "table",
+  tags: ["reporting"],
+  bigquery: {
+    partitionBy: "date(created_at)"
+  },
+  description: "Combine both questions and answers into a single posts_all table",
+  assertions: {
+    uniqueKey: ["post_id"]
+  },
+
+  // uncomment 'database' if you don't want to use the default database specified in 'dataform.json'
+  // keep commented if you use the template on a projet without env, e.g. Devoteam sandbox
+  // database: dataform.projectConfig.vars.project + dataform.projectConfig.vars.env,
+  schema: "d_" + dataform.projectConfig.vars.use_case + "_reporting_" + dataform.projectConfig.vars.env,
+}
+
+select
+  post_id,
+  created_at,
+  type,
+  title,
+  --- body,
+  owner_user_id,
+  parent_id
+from
+  ${ref("stg_posts_answers")}
+union all
+select
+  post_id,
+  created_at,
+  type,
+  title,
+  --- body,
+  owner_user_id,
+  parent_id
+from
+  ${ref("stg_posts_questions")}

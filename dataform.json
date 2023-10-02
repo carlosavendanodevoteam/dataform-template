@@ -1,0 +1,17 @@
+{
+    "defaultSchema": "dataform",
+    "assertionSchema": "dataform_assertions",
+    "warehouse": "bigquery",
+    "defaultDatabase": "sandbox-hrialan",
+    "defaultLocation": "US",
+    "vars":{
+      "use_case": "dgc_uc",
+      "_use_case": "Mainly used for BQ dataset and other resources names.",
+
+      "project": "sandbox-hrialan",
+      "_project": "The GCP project to use without env (e.g. 'dgc-dataplatform-'). For projects without env like sandboxes, set the full project name.",
+
+      "env": "dv",
+      "_env": "The default environment to use. Almost always'dv'."
+    }
+  }
